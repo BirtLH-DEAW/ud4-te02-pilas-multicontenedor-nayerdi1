@@ -1,0 +1,61 @@
+# Versión utilizada
+version: '3'
+
+# Configuración de los servidores que vamos a necesitar
+services: 
+
+  # mysql es el nombre que vamos a dar a este primer servicio
+  # Será el nombre que tendremos que usar cuando nos refiramos a él
+  # Servicio MySQL (base de datos)
+  mysql:
+    image: mysql:5.7 
+    restart: always
+    environment:
+      - MYSQL_ROOT_PASSWORD=root
+      - MYSQL_DATABASE=wordpress
+      - MYSQL_USER=wordpress
+      - MYSQL_PASSWORD=wordpress
+    ports:
+      - 3306:3306
+    volumes:
+      - mysql_data:/var/lib/mysql # Volumen para datos de MySQL
+    healthcheck: # Hace que los otros servicios esperen hasta que esté listo
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      retries: 5
+      timeout: 5s
+  # Servicio WordPress   
+  wordpress:
+    image: wordpress:latest
+    restart: always
+    environment:
+      - WORDPRESS_DB_HOST=mysql
+      - WORDPRESS_DB_USER=wordpress
+      - WORDPRESS_DB_PASSWORD=wordpress
+      - WORDPRESS_DB_NAME=wordpress
+    ports:
+      - 80:80
+    volumes:
+      - wordpress_data:/var/www/html # Volumen para archivos de WordPress 
+    depends_on:
+      mysql:
+        condition: service_healthy  # Espera hasta que MySQL esté listo
+  # Servicio phpMyAdmin
+  phpmyadmin:
+    image: phpmyadmin:latest
+    container_name: phpmyadmin
+    restart: always
+    ports:
+      - 8080:80
+    environment:
+      - PMA_HOST=mysql # define el servidor de base de datos al que se conecta
+    volumes:
+      - wordpress_data:/usr/share/phpmyadmin
+    depends_on:
+      mysql:
+        condition: service_healthy  # Espera hasta que MySQL esté listo
+
+# Volumenes
+volumes:
+  mysql_data:
+  wordpress_data:
